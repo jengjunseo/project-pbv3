@@ -3,10 +3,14 @@ name: Restore PBV3.1 source packet
 on:
   push:
     branches: ["agent/pbv3.1-restore"]
-    paths: [".restore/**", ".github/workflows/restore-pbv31.yml"]
+    paths: [".restore/ready"]
 
 permissions:
   contents: write
+
+concurrency:
+  group: pbv31-restore
+  cancel-in-progress: true
 
 jobs:
   restore:
