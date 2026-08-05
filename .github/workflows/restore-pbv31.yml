@@ -28,6 +28,14 @@ jobs:
           test -f .restore/sha256
           test -f .restore/chunk-sha256
           cat <<'SUMS' | sha256sum --check --strict
+          20fb5823f475eb6417ef42684b6d8fd3f59f388bff50f5ca7316e36400a3f66e  .restore/q-00a-0
+          6ee0c17f328f877c32556477d6660827d29ced9c778f7514532887c200b4ab80  .restore/q-00a-1
+          524913fde3b0d77ed8f8e8204d4c87c5fb0c6155d37ef5ebca9d67efcddaa5bc  .restore/q-01b-0
+          cf2627edbca02d00635591b514e29401f5cb46d1256bfc8f3194c13f858cde92  .restore/q-01b-1
+          SUMS
+          cat .restore/q-00a-0 .restore/q-00a-1 > .restore/fix-00a
+          cat .restore/q-01b-0 .restore/q-01b-1 > .restore/fix-01b
+          cat <<'SUMS' | sha256sum --check --strict
           048f5f454cca6eb1d8476a36c892e35467839ab2384dd5fe2f81d3bd630c52e7  .restore/fix-00a
           129303a8e7df8182c5fd46e6fcadd365d5621796fa96dbccf142e19d912bc8d1  .restore/fix-00b
           81f9ecd03acd6216bf560b645f17aa50464116cf021e6c8e874012f030e158db  .restore/fix-01a
