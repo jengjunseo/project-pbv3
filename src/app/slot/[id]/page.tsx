@@ -22,5 +22,5 @@ export default async function SlotPage({ params }: { params: Promise<{ id: strin
   const { id: rawId } = await params;
   const id = parseSlotId(rawId);
   if (id === null || rawId !== formatSlotId(id)) notFound();
-  return <PBWorkspace id={id} maxFileBytes={MAX_FILE_BYTES} />;
+  return <PBWorkspace key={id} id={id} maxFileBytes={MAX_FILE_BYTES} />;
 }

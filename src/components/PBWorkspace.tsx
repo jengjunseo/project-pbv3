@@ -19,6 +19,7 @@ import {
   type DragEvent,
   useCallback,
   useEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -66,7 +67,6 @@ export function PBWorkspace({ id, maxFileBytes }: { id: number; maxFileBytes: nu
   const loadEpochRef = useRef(new RequestEpoch());
   const saveEpochRef = useRef(new RequestEpoch());
   const activeSaveAbortRef = useRef<AbortController | null>(null);
-  const saveHandlerRef = useRef<() => void>(() => undefined);
 
   const existingFile = removeExistingFile ? null : slot?.file ?? null;
   const slotLabel = formatSlotId(id);
@@ -74,7 +74,6 @@ export function PBWorkspace({ id, maxFileBytes }: { id: number; maxFileBytes: nu
   const hasPayload = text.trim().length > 0 || pendingFile !== null || existingFile !== null;
   const canSave = isDirty && hasPayload && state !== "loading" && state !== "saving";
 
-  useEffect(() => { activeIdRef.current = id; }, [id]);
   useEffect(() => { textRef.current = text; }, [text]);
   useEffect(() => { pendingFileRef.current = pendingFile; }, [pendingFile]);
   useEffect(() => { removeFileRef.current = removeExistingFile; }, [removeExistingFile]);
@@ -130,19 +129,10 @@ export function PBWorkspace({ id, maxFileBytes }: { id: number; maxFileBytes: nu
   }, []);
 
   useEffect(() => {
-    activeIdRef.current = id;
-    loadEpochRef.current.invalidate();
-    saveEpochRef.current.invalidate();
-    activeSaveAbortRef.current?.abort();
-    setSlot(null);
-    setText("");
-    setPendingFile(null);
-    setRemoveExistingFile(false);
-    setMessage("");
-    setState("loading");
-
+    const loadEpoch = loadEpochRef.current;
+    const saveEpoch = saveEpochRef.current;
     const controller = new AbortController();
-    const epoch = loadEpochRef.current.begin();
+    const epoch = loadEpoch.begin();
     const requestId = id;
 
     void (async () => {
@@ -152,14 +142,14 @@ export function PBWorkspace({ id, maxFileBytes }: { id: number; maxFileBytes: nu
           signal: controller.signal,
         });
         const data = await parseApiResponse<SlotReadResponse>(response);
-        if (!loadEpochRef.current.isCurrent(epoch) || activeIdRef.current !== requestId) return;
+        if (!loadEpoch.isCurrent(epoch) || activeIdRef.current !== requestId) return;
         const next = data.empty ? null : data.slot;
         setSlot(next);
         setText(next?.text ?? "");
         setState("idle");
       } catch (cause) {
         if (controller.signal.aborted) return;
-        if (!loadEpochRef.current.isCurrent(epoch) || activeIdRef.current !== requestId) return;
+        if (!loadEpoch.isCurrent(epoch) || activeIdRef.current !== requestId) return;
         setState("load-error");
         setMessage(messageFrom(cause, "슬롯을 불러오지 못했습니다."));
       }
@@ -167,8 +157,8 @@ export function PBWorkspace({ id, maxFileBytes }: { id: number; maxFileBytes: nu
 
     return () => {
       controller.abort();
-      loadEpochRef.current.invalidate();
-      saveEpochRef.current.invalidate();
+      loadEpoch.invalidate();
+      saveEpoch.invalidate();
       activeSaveAbortRef.current?.abort();
     };
   }, [id]);
@@ -273,13 +263,15 @@ export function PBWorkspace({ id, maxFileBytes }: { id: number; maxFileBytes: nu
     }
   }, [id, state]);
 
-  saveHandlerRef.current = () => { void save(); };
+  const saveFromShortcut = useEffectEvent(() => {
+    void save();
+  });
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        saveHandlerRef.current();
+        saveFromShortcut();
       }
     };
     window.addEventListener("keydown", onKeyDown);
