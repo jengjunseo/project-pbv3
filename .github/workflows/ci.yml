@@ -1,0 +1,26 @@
+name: PBV3 Quality Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run lint
+      - run: npm run build
+        env:
+          UPSTASH_REDIS_REST_URL: https://example.upstash.io
+          UPSTASH_REDIS_REST_TOKEN: test-token
+          BLOB_READ_WRITE_TOKEN: vercel_blob_rw_test
