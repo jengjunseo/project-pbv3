@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { HomeLauncher } from "@/components/HomeLauncher";
 
 export default function HomePage() {
@@ -6,9 +7,9 @@ export default function HomePage() {
       <div className="home-noise" aria-hidden="true" />
       <section className="home-card">
         <header className="brand-row">
-          <a className="brand" href="/" aria-label="PB 홈">
+          <Link className="brand" href="/" aria-label="PB 홈">
             PB<span className="brand-dot">.</span>
-          </a>
+          </Link>
           <span className="permanent-badge">NO TIMER</span>
         </header>
 
