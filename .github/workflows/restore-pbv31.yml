@@ -27,6 +27,14 @@ jobs:
           set -euo pipefail
           test -f .restore/sha256
           test -f .restore/chunk-sha256
+          cat <<'SUMS' | sha256sum --check --strict
+          048f5f454cca6eb1d8476a36c892e35467839ab2384dd5fe2f81d3bd630c52e7  .restore/fix-00a
+          129303a8e7df8182c5fd46e6fcadd365d5621796fa96dbccf142e19d912bc8d1  .restore/fix-00b
+          81f9ecd03acd6216bf560b645f17aa50464116cf021e6c8e874012f030e158db  .restore/fix-01a
+          4d99e4e3c5630f8270687be365b3d071197bc6d3b17f44a163654b655a2133c8  .restore/fix-01b
+          SUMS
+          cat .restore/fix-00a .restore/fix-00b > .restore/chunk-00
+          cat .restore/fix-01a .restore/fix-01b > .restore/chunk-01
           sha256sum --check --strict .restore/chunk-sha256
           cat .restore/chunk-[0-9][0-9] > /tmp/pbv31.b64
           base64 --decode /tmp/pbv31.b64 > /tmp/pbv31.zip
