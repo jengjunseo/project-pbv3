@@ -71,6 +71,7 @@ jobs:
             --exclude '.git/' \
             --exclude '.restore/' \
             --exclude '.github/workflows/restore-pbv31.yml' \
+            --exclude '.github/workflows/ci.yml' \
             /tmp/pbv31-source/ ./
           rm -rf .restore
           git config user.name github-actions[bot]
