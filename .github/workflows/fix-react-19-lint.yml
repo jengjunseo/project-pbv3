@@ -31,120 +31,65 @@ jobs:
           source = source.replace('  const saveHandlerRef = useRef<() => void>(() => undefined);\n', '')
           source = source.replace('  useEffect(() => { activeIdRef.current = id; }, [id]);\n', '')
 
-          old_effect = '''  useEffect(() => {
-            activeIdRef.current = id;
-            loadEpochRef.current.invalidate();
-            saveEpochRef.current.invalidate();
-            activeSaveAbortRef.current?.abort();
-            setSlot(null);
-            setText("");
-            setPendingFile(null);
-            setRemoveExistingFile(false);
-            setMessage("");
-            setState("loading");
+          effect_start = source.index('  useEffect(() => {\n    activeIdRef.current = id;')
+          effect_end = source.index('\n\n  useEffect(() => {\n    const onFocus', effect_start)
+          new_effect = '\n'.join([
+              '  useEffect(() => {',
+              '    const loadEpoch = loadEpochRef.current;',
+              '    const saveEpoch = saveEpochRef.current;',
+              '    const controller = new AbortController();',
+              '    const epoch = loadEpoch.begin();',
+              '    const requestId = id;',
+              '',
+              '    void (async () => {',
+              '      try {',
+              '        const response = await fetch(`/api/slots/${formatSlotId(requestId)}`, {',
+              '          cache: "no-store",',
+              '          signal: controller.signal,',
+              '        });',
+              '        const data = await parseApiResponse<SlotReadResponse>(response);',
+              '        if (!loadEpoch.isCurrent(epoch) || activeIdRef.current !== requestId) return;',
+              '        const next = data.empty ? null : data.slot;',
+              '        setSlot(next);',
+              '        setText(next?.text ?? "");',
+              '        setState("idle");',
+              '      } catch (cause) {',
+              '        if (controller.signal.aborted) return;',
+              '        if (!loadEpoch.isCurrent(epoch) || activeIdRef.current !== requestId) return;',
+              '        setState("load-error");',
+              '        setMessage(messageFrom(cause, "슬롯을 불러오지 못했습니다."));',
+              '      }',
+              '    })();',
+              '',
+              '    return () => {',
+              '      controller.abort();',
+              '      loadEpoch.invalidate();',
+              '      saveEpoch.invalidate();',
+              '      activeSaveAbortRef.current?.abort();',
+              '    };',
+              '  }, [id]);',
+          ])
+          source = source[:effect_start] + new_effect + source[effect_end:]
 
-            const controller = new AbortController();
-            const epoch = loadEpochRef.current.begin();
-            const requestId = id;
-
-            void (async () => {
-              try {
-                const response = await fetch(`/api/slots/${formatSlotId(requestId)}`, {
-                  cache: "no-store",
-                  signal: controller.signal,
-                });
-                const data = await parseApiResponse<SlotReadResponse>(response);
-                if (!loadEpochRef.current.isCurrent(epoch) || activeIdRef.current !== requestId) return;
-                const next = data.empty ? null : data.slot;
-                setSlot(next);
-                setText(next?.text ?? "");
-                setState("idle");
-              } catch (cause) {
-                if (controller.signal.aborted) return;
-                if (!loadEpochRef.current.isCurrent(epoch) || activeIdRef.current !== requestId) return;
-                setState("load-error");
-                setMessage(messageFrom(cause, "슬롯을 불러오지 못했습니다."));
-              }
-            })();
-
-            return () => {
-              controller.abort();
-              loadEpochRef.current.invalidate();
-              saveEpochRef.current.invalidate();
-              activeSaveAbortRef.current?.abort();
-            };
-          }, [id]);
-          '''
-          new_effect = '''  useEffect(() => {
-            const loadEpoch = loadEpochRef.current;
-            const saveEpoch = saveEpochRef.current;
-            const controller = new AbortController();
-            const epoch = loadEpoch.begin();
-            const requestId = id;
-
-            void (async () => {
-              try {
-                const response = await fetch(`/api/slots/${formatSlotId(requestId)}`, {
-                  cache: "no-store",
-                  signal: controller.signal,
-                });
-                const data = await parseApiResponse<SlotReadResponse>(response);
-                if (!loadEpoch.isCurrent(epoch) || activeIdRef.current !== requestId) return;
-                const next = data.empty ? null : data.slot;
-                setSlot(next);
-                setText(next?.text ?? "");
-                setState("idle");
-              } catch (cause) {
-                if (controller.signal.aborted) return;
-                if (!loadEpoch.isCurrent(epoch) || activeIdRef.current !== requestId) return;
-                setState("load-error");
-                setMessage(messageFrom(cause, "슬롯을 불러오지 못했습니다."));
-              }
-            })();
-
-            return () => {
-              controller.abort();
-              loadEpoch.invalidate();
-              saveEpoch.invalidate();
-              activeSaveAbortRef.current?.abort();
-            };
-          }, [id]);
-          '''
-          if old_effect not in source:
-              raise SystemExit('slot lifecycle block not found')
-          source = source.replace(old_effect, new_effect)
-
-          old_shortcut = '''  saveHandlerRef.current = () => { void save(); };
-
-          useEffect(() => {
-            const onKeyDown = (event: KeyboardEvent) => {
-              if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
-                event.preventDefault();
-                saveHandlerRef.current();
-              }
-            };
-            window.addEventListener("keydown", onKeyDown);
-            return () => window.removeEventListener("keydown", onKeyDown);
-          }, []);
-          '''
-          new_shortcut = '''  const saveFromShortcut = useEffectEvent(() => {
-            void save();
-          });
-
-          useEffect(() => {
-            const onKeyDown = (event: KeyboardEvent) => {
-              if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
-                event.preventDefault();
-                saveFromShortcut();
-              }
-            };
-            window.addEventListener("keydown", onKeyDown);
-            return () => window.removeEventListener("keydown", onKeyDown);
-          }, []);
-          '''
-          if old_shortcut not in source:
-              raise SystemExit('shortcut block not found')
-          workspace.write_text(source.replace(old_shortcut, new_shortcut))
+          shortcut_start = source.index('  saveHandlerRef.current = () => { void save(); };')
+          shortcut_end = source.index('\n\n  async function clear()', shortcut_start)
+          new_shortcut = '\n'.join([
+              '  const saveFromShortcut = useEffectEvent(() => {',
+              '    void save();',
+              '  });',
+              '',
+              '  useEffect(() => {',
+              '    const onKeyDown = (event: KeyboardEvent) => {',
+              '      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {',
+              '        event.preventDefault();',
+              '        saveFromShortcut();',
+              '      }',
+              '    };',
+              '    window.addEventListener("keydown", onKeyDown);',
+              '    return () => window.removeEventListener("keydown", onKeyDown);',
+              '  }, []);',
+          ])
+          workspace.write_text(source[:shortcut_start] + new_shortcut + source[shortcut_end:])
 
           page = Path('src/app/slot/[id]/page.tsx')
           page_source = page.read_text()
