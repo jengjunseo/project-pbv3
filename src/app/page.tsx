@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { HomeLauncher } from "@/components/HomeLauncher";
 
 export default function HomePage() {
@@ -6,14 +7,22 @@ export default function HomePage() {
       <div className="home-noise" aria-hidden="true" />
       <section className="home-card">
         <header className="brand-row">
-          <a className="brand" href="/" aria-label="PB 홈">PB<span className="brand-dot">.</span></a>
+          <Link className="brand" href="/" aria-label="PB 홈">
+            PB<span className="brand-dot">.</span>
+          </Link>
           <span className="permanent-badge">NO TIMER</span>
         </header>
 
         <div className="hero-copy">
           <p className="eyebrow">PUBLIC POCKET · 00—99</p>
-          <h1>번호 하나면<br />끝.</h1>
-          <p className="hero-subtitle">로그인도, 만료 시간도 없습니다. 같은 번호를 다른 기기에서 열면 텍스트와 파일이 그대로 있습니다.</p>
+          <h1>
+            번호 하나면
+            <br />
+            끝.
+          </h1>
+          <p className="hero-subtitle">
+            로그인도, 만료 시간도 없습니다. 같은 번호를 다른 기기에서 열면 텍스트와 파일이 그대로 있습니다.
+          </p>
         </div>
 
         <HomeLauncher />

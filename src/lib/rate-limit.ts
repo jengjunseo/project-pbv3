@@ -1,14 +1,22 @@
-import { getRedis } from "@/lib/redis";
+import "server-only";
+import { HttpError } from "@/lib/http";
+import { getSupabaseAdmin } from "@/lib/supabase-server";
 
-const LIMIT = 60;
+export async function enforceRateLimit(
+  fingerprint: string,
+  action: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<void> {
+  const { data, error } = await getSupabaseAdmin().rpc("pb_v3_take_rate_limit", {
+    p_fingerprint_hash: fingerprint,
+    p_action: action,
+    p_limit: limit,
+    p_window_seconds: windowSeconds,
+  });
 
-export async function checkWriteRateLimit(request: Request): Promise<boolean> {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const ip = forwarded || request.headers.get("x-real-ip") || "unknown";
-  const minute = Math.floor(Date.now() / 60_000);
-  const key = `pb:v3:rate:${ip}:${minute}`;
-  const redis = getRedis();
-  const count = await redis.incr(key);
-  if (count === 1) await redis.expire(key, 70);
-  return count <= LIMIT;
+  if (error) throw new Error(`rate-limit RPC failed: ${error.message}`);
+  if (data !== true) {
+    throw new HttpError("RATE_LIMITED", "요청이 너무 많습니다. 잠시 후 다시 시도하세요.", 429);
+  }
 }

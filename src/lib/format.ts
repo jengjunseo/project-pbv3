@@ -3,10 +3,16 @@ export function formatBytes(bytes: number): string {
   const units = ["KiB", "MiB", "GiB"];
   let value = bytes / 1024;
   let index = 0;
-  while (value >= 1024 && index < units.length - 1) { value /= 1024; index += 1; }
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
   return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[index]}`;
 }
 
-export function formatUpdatedAt(timestamp: number): string {
-  return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(timestamp));
+export function formatUpdatedAt(timestamp: number | string): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(timestamp));
 }

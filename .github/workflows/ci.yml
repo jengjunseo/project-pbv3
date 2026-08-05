@@ -1,25 +1,33 @@
-name: PBV3 Quality Gate
+name: PBV3.1 Quality Gate
 
 on:
   push:
-    branches: [main]
+    branches: [main, "agent/**"]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  verify:
+  quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - run: npm install
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run typecheck
       - run: npm run test
       - run: npm run lint
+      - run: npm run security:scan
       - run: npm run build
         env:
-          UPSTASH_REDIS_REST_URL: https://example.upstash.io
-          UPSTASH_REDIS_REST_TOKEN: test-token
-          BLOB_READ_WRITE_TOKEN: vercel_blob_rw_test
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_SECRET_KEY: sb_secret_ci_placeholder_not_a_real_key
+          PB_APP_ORIGIN: http://localhost:3000
+          PB_FINGERPRINT_SECRET: ci-fingerprint-secret-at-least-32-characters
+          PB_MAINTENANCE_SECRET: ci-maintenance-secret-at-least-32-characters
+          CRON_SECRET: ci-cron-secret-at-least-32-characters
