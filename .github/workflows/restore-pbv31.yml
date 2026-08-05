@@ -28,13 +28,20 @@ jobs:
           test -f .restore/sha256
           test -f .restore/chunk-sha256
           cat <<'SUMS' | sha256sum --check --strict
+          8f0f9338de5d3335fddd2d5d4e7624dde3ad524348ec92e21a99c87385c9f1ab  .restore/e-00-0.b64
+          b0795c1d02c1c37dd8f7bdafb6dfe78111a694505d2e042b2c63cf9df68ff559  .restore/e-00-1
+          739c7bb56ddabb20679822db6fbe0b2cfc7595d045f0271ed5d02b2ec65013a4  .restore/e-01-0.b64
+          9bdf9b07751f6170aeaac0bb2a17f0df48d59dbb5adb036b01f0d5549bbd5d4f  .restore/e-01-1.b64
+          SUMS
+          base64 --decode .restore/e-00-0.b64 > .restore/e-00-0
+          base64 --decode .restore/e-01-0.b64 > .restore/e-01-0
+          base64 --decode .restore/e-01-1.b64 > .restore/e-01-1
+          cat <<'SUMS' | sha256sum --check --strict
           f4a07e59ea6890f021c1245a0ad29d621fe944b90c9d7f3de63c97d845071a4c  .restore/e-00-0
           b0795c1d02c1c37dd8f7bdafb6dfe78111a694505d2e042b2c63cf9df68ff559  .restore/e-00-1
           8c09d938974b7a92809f0b9ff98acbf925b2bd29674a26657791201233d17961  .restore/e-01-0
-          9bdf9b07751f6170aeaac0bb2a17f0df48d59dbb5adb036b01f0d5549bbd5d4f  .restore/e-01-1.b64
+          aa30744fd1c310a3fe870523bdcc081f04e940dc53a7cc3e583d5282fb89a983  .restore/e-01-1
           SUMS
-          base64 --decode .restore/e-01-1.b64 > .restore/e-01-1
-          echo 'aa30744fd1c310a3fe870523bdcc081f04e940dc53a7cc3e583d5282fb89a983  .restore/e-01-1' | sha256sum --check --strict
           cat .restore/e-00-0 .restore/e-00-1 > .restore/q-00a-0
           cat .restore/e-01-0 .restore/e-01-1 > .restore/q-01b-1
           cat <<'SUMS' | sha256sum --check --strict
