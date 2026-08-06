@@ -1,13 +1,5 @@
-import { HomeLauncher } from "@/components/HomeLauncher";
+import { MinimalPB } from "@/components/MinimalPB";
 
 export default function HomePage() {
-  return (
-    <main className="home-shell minimal-home">
-      <div className="home-noise" aria-hidden="true" />
-      <section className="home-card minimal-home-card">
-        <div className="minimal-brand">Project<br />PB</div>
-        <HomeLauncher />
-      </section>
-    </main>
-  );
+  return <MinimalPB />;
 }
