@@ -1,9 +1,21 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./minimal.css";
+
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "PB";
 
 export const metadata: Metadata = {
-  title: "PB — Pocket Bridge",
-  description: "번호 하나로 텍스트와 파일을 빠르게 넘기는 로그인 없는 공용 포켓",
+  title: {
+    default: `${appName} — instant pocket`,
+    template: `%s — ${appName}`,
+  },
+  description: "0~99 번호 하나로 텍스트와 작은 파일을 빠르게 넘기는 공용 포켓.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#070a10",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
