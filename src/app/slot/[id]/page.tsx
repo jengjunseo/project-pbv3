@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { PBWorkspace } from "@/components/PBWorkspace";
-import { MAX_FILE_BYTES } from "@/lib/constants";
+import { notFound, redirect } from "next/navigation";
 import { formatSlotId, parseSlotId } from "@/lib/validation";
 
 export const dynamicParams = false;
@@ -22,5 +20,5 @@ export default async function SlotPage({ params }: { params: Promise<{ id: strin
   const { id: rawId } = await params;
   const id = parseSlotId(rawId);
   if (id === null || rawId !== formatSlotId(id)) notFound();
-  return <PBWorkspace key={id} id={id} maxFileBytes={MAX_FILE_BYTES} />;
+  redirect(`/?slot=${formatSlotId(id)}`);
 }
