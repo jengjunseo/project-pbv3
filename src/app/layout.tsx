@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import "./minimal.css";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "PB";
 

@@ -1,15 +1,12 @@
 export default function LoadingSlot() {
   return (
-    <main className="slot-shell" aria-busy="true">
-      <header className="slot-topbar">
-        <span className="skeleton square" />
-        <span className="slot-brand">PB<span>.</span></span>
-        <span className="skeleton pill" />
-      </header>
-      <div className="workspace-grid">
-        <section className="editor-panel skeleton-panel" />
-        <aside className="side-panel skeleton-panel" />
-      </div>
+    <main className="pb-screen" aria-busy="true">
+      <div className="pb-aurora" aria-hidden="true" />
+      <section className="pb-glass-card pb-skeleton">
+        <header className="pb-brand">Project<br />PB</header>
+        <span className="pb-slot-number">--</span>
+        <div className="pb-editor" />
+      </section>
     </main>
   );
 }

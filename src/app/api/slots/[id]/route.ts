@@ -7,7 +7,6 @@ import { parseSlotId, slotCommitSchema } from "@/lib/validation";
 import type { PBErrorResponse, SlotReadResponse, SlotWriteResponse } from "@/types/pb";
 
 export const runtime = "nodejs";
-export const preferredRegion = "icn1";
 export const dynamic = "force-dynamic";
 
 export async function GET(

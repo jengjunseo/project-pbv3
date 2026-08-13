@@ -2,9 +2,9 @@
 
 ## Automated
 
-- [ ] `npm install`
+- [ ] `npm ci`
 - [ ] `npm run typecheck`
-- [ ] `npm run test` — exactly 33 tests
+- [ ] `npm run test` — attachment and persistence contract tests
 - [ ] `npm run lint`
 - [ ] `npm run security:scan`
 - [ ] `npm run build`

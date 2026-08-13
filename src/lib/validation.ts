@@ -1,8 +1,5 @@
 import { z } from "zod";
 import {
-  ALLOWED_MIME_TYPES,
-  BLOCKED_EXTENSIONS,
-  BLOCKED_MIME_TYPES,
   MAX_FILE_BYTES,
   MAX_TEXT_CHARS,
   SLOT_MAX,
@@ -51,12 +48,6 @@ export function formatSlotId(id: number): string {
   return String(id).padStart(2, "0");
 }
 
-export function getFileExtension(name: string): string {
-  const basename = name.trim().toLowerCase().split(/[\\/]/).pop() ?? "";
-  const index = basename.lastIndexOf(".");
-  return index >= 0 ? basename.slice(index + 1) : "";
-}
-
 export function sanitizeFileName(name: string): string {
   const basename = name.trim().split(/[\\/]/).pop() ?? "file";
   const safe = basename
@@ -76,16 +67,7 @@ export function validateUploadInput(input: { name: string; size: number; type: s
   if (!Number.isSafeInteger(input.size) || input.size <= 0) return { ok: false, message: "빈 파일은 업로드할 수 없습니다." };
   if (input.size > MAX_FILE_BYTES) return { ok: false, message: "파일은 최대 10 MiB까지 업로드할 수 있습니다." };
 
-  const extension = getFileExtension(name);
-  if (!extension || BLOCKED_EXTENSIONS.has(extension)) {
-    return { ok: false, message: extension ? `.${extension} 파일은 업로드할 수 없습니다.` : "확장자가 없는 파일은 업로드할 수 없습니다." };
-  }
-
   const mime = input.type.trim().toLowerCase() || "application/octet-stream";
-  if (BLOCKED_MIME_TYPES.has(mime) || !ALLOWED_MIME_TYPES.has(mime)) {
-    return { ok: false, message: "지원하지 않거나 브라우저에서 실행될 수 있는 파일 형식입니다." };
-  }
-
   return { ok: true, mime };
 }
 

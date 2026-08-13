@@ -5,6 +5,15 @@ begin;
 
 create extension if not exists pgcrypto with schema extensions;
 
+-- Bootstrap a fresh project while preserving the legacy columns used by an upgrade.
+create table if not exists public.pb_v3_slots (
+  id smallint primary key check (id between 0 and 99),
+  text text not null default '',
+  file jsonb,
+  bytes bigint not null default 0,
+  updated_at timestamptz not null default now()
+);
+
 -- Remove the legacy client-authoritative eviction trigger.
 drop trigger if exists pb_v3_evict_after_write on public.pb_v3_slots;
 drop function if exists public.pb_v3_evict_oldest();
@@ -98,6 +107,10 @@ set
 
 alter table public.pb_v3_slots drop constraint if exists pb_v3_slots_bytes_check;
 alter table public.pb_v3_slots add constraint pb_v3_slots_bytes_check check (bytes >= 0);
+alter table public.pb_v3_slots drop constraint if exists pb_v3_slots_id_check;
+alter table public.pb_v3_slots add constraint pb_v3_slots_id_check check (id between 0 and 99);
+alter table public.pb_v3_slots drop constraint if exists pb_v3_slots_text_chars_check;
+alter table public.pb_v3_slots add constraint pb_v3_slots_text_chars_check check (char_length(text) <= 30000);
 alter table public.pb_v3_slots drop constraint if exists pb_v3_slots_file_bytes_check;
 alter table public.pb_v3_slots add constraint pb_v3_slots_file_bytes_check check (file_bytes between 0 and 10485760);
 alter table public.pb_v3_slots drop constraint if exists pb_v3_slots_text_bytes_check;
@@ -218,11 +231,19 @@ grant select, insert, update, delete on table public.pb_v3_rate_limits to servic
 grant usage, select on sequence public.pb_v3_cleanup_queue_id_seq to service_role;
 
 -- Private bucket + restrictive policy means browser-wide anon CRUD remains impossible.
-update storage.buckets
-set public = false,
-    file_size_limit = 10485760,
-    updated_at = now()
-where id = 'pb-v3';
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'pb-v3',
+  'pb-v3',
+  false,
+  10485760,
+  null
+)
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types,
+    updated_at = now();
 
 drop policy if exists pb_v3_storage_deny_direct on storage.objects;
 create policy pb_v3_storage_deny_direct

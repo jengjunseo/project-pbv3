@@ -65,6 +65,7 @@ PB_APP_ORIGIN=http://localhost:3000
 PB_FINGERPRINT_SECRET=replace-with-at-least-32-random-characters
 PB_MAINTENANCE_SECRET=replace-with-at-least-32-random-characters
 CRON_SECRET=replace-with-at-least-32-random-characters
+NEXT_PUBLIC_APP_NAME=PB
 ```
 
 Never create `NEXT_PUBLIC_SUPABASE_*` variables for PBV3.1.
@@ -89,13 +90,24 @@ The existing production project must not receive this migration until preview ce
 ## Local quality gates
 
 ```bash
-npm install
+npm ci
 npm run typecheck
-npm run test          # 33 local contract tests
+npm run test          # local contract tests
 npm run lint
 npm run security:scan
 npm run build
 ```
+
+## Vercel deployment
+
+1. Create a Supabase project in Seoul and apply the migration to a disposable branch first.
+2. Run both SQL suites under `supabase/tests/` and complete the browser checklist in `.ai/QA_CHECKLIST.md`.
+3. Import this GitHub repository into Vercel. Framework detection should select Next.js automatically.
+4. Add every variable from `.env.example` to Vercel. Use the production URL for `PB_APP_ORIGIN`; never expose the Supabase secret with a `NEXT_PUBLIC_` prefix.
+5. Keep `CRON_SECRET` set so Vercel authenticates `/api/maintenance/cleanup` with `Authorization: Bearer <secret>`.
+6. Deploy from `main`. `vercel.json` pins Functions to Seoul, gives API routes 15 seconds, and runs the durable cleanup fallback every day at 03:00 UTC.
+
+The daily schedule deploys on every Vercel plan. On Pro or Enterprise, change it to `*/10 * * * *` for faster orphan cleanup; save/clear requests already run a small cleanup batch through `after()`.
 
 The security scan rejects server secrets, Supabase REST/Storage endpoints, and browser-side Authorization headers in client components.
 

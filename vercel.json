@@ -1,15 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["icn1"],
   "functions": {
     "src/app/api/**/route.ts": {
-      "regions": ["icn1"],
       "maxDuration": 15
     }
   },
   "crons": [
     {
       "path": "/api/maintenance/cleanup",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }

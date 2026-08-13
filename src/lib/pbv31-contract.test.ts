@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { RequestEpoch } from "@/lib/client-request-guard";
+import { MAX_FILE_BYTES } from "@/lib/constants";
 import { formatBytes } from "@/lib/format";
 import {
   cancelUploadSchema,
   formatSlotId,
-  getFileExtension,
   isSafeObjectPath,
   objectPathBelongsToSlot,
   parseSlotId,
@@ -18,6 +18,25 @@ import {
 const uuid = "123e4567-e89b-42d3-a456-426614174000";
 const path17 = `slots/17/${uuid}/notes.txt`;
 const migration = readFileSync("supabase/migrations/20260805093000_pb_v3_1_persistence_boundary.sql", "utf8");
+const client = readFileSync("src/components/MinimalPB.tsx", "utf8");
+const arbitraryAttachmentCases = [
+  ["notes.txt", "text/plain"],
+  ["archive.zip", "application/zip"],
+  ["archive.zip", "application/x-zip-compressed"],
+  ["archive.zip", "application/octet-stream"],
+  ["archive.zip", ""],
+  ["archive.zip", "application/vnd.vendor-zip"],
+  ["page.html", "text/html"],
+  ["script.js", "application/javascript"],
+  ["vector.svg", "image/svg+xml"],
+  ["document.xml", "application/xml"],
+  ["binary.exe", "application/x-msdownload"],
+  ["app.apk", "application/vnd.android.package-archive"],
+  ["unknown.xyz", "application/octet-stream"],
+  ["unknown.xyz", ""],
+  ["README", ""],
+  ["document.pdf", "application/pdf"],
+] as const;
 
 describe("PBV3.1 local contracts", () => {
   it("01 accepts slot zero", () => expect(parseSlotId("0")).toBe(0));
@@ -28,20 +47,22 @@ describe("PBV3.1 local contracts", () => {
   it("06 rejects decimal slots", () => expect(parseSlotId("1.5")).toBeNull());
   it("07 rejects missing slots", () => expect(parseSlotId(undefined)).toBeNull());
   it("08 formats every route as two digits", () => expect(formatSlotId(7)).toBe("07"));
-  it("09 extracts a lowercase extension", () => expect(getFileExtension("Report.PDF")).toBe("pdf"));
-  it("10 strips directory components from names", () => expect(sanitizeFileName("../../a.txt")).toBe("a.txt"));
-  it("11 strips control characters", () => expect(sanitizeFileName("a\u0000b.txt")).toBe("ab.txt"));
-  it("12 normalizes spaces", () => expect(sanitizeFileName("a   b.txt")).toBe("a-b.txt"));
-  it("13 removes leading dots", () => expect(sanitizeFileName("...secret.txt")).toBe("secret.txt"));
-  it("14 always returns a nonempty name", () => expect(sanitizeFileName("...")).toBe("file"));
-  it("15 accepts a plain text upload", () => expect(validateUploadInput({ name: "a.txt", size: 1, type: "text/plain" }).ok).toBe(true));
-  it("16 accepts a PDF upload", () => expect(validateUploadInput({ name: "a.pdf", size: 10, type: "application/pdf" }).ok).toBe(true));
-  it("17 rejects empty files", () => expect(validateUploadInput({ name: "a.txt", size: 0, type: "text/plain" }).ok).toBe(false));
-  it("18 rejects files over ten MiB", () => expect(validateUploadInput({ name: "a.txt", size: 10 * 1024 * 1024 + 1, type: "text/plain" }).ok).toBe(false));
-  it("19 rejects HTML active content", () => expect(validateUploadInput({ name: "a.html", size: 1, type: "text/html" }).ok).toBe(false));
-  it("20 rejects SVG active content", () => expect(validateUploadInput({ name: "a.svg", size: 1, type: "image/svg+xml" }).ok).toBe(false));
-  it("21 rejects script extensions", () => expect(validateUploadInput({ name: "a.js", size: 1, type: "text/plain" }).ok).toBe(false));
-  it("22 rejects extensionless files", () => expect(validateUploadInput({ name: "README", size: 1, type: "text/plain" }).ok).toBe(false));
+  it("09 strips directory components from names", () => expect(sanitizeFileName("../../a.txt")).toBe("a.txt"));
+  it("10 strips control characters", () => expect(sanitizeFileName("a\u0000b.txt")).toBe("ab.txt"));
+  it("11 normalizes spaces", () => expect(sanitizeFileName("a   b.txt")).toBe("a-b.txt"));
+  it("12 removes leading dots", () => expect(sanitizeFileName("...secret.txt")).toBe("secret.txt"));
+  it("13 always returns a nonempty name", () => expect(sanitizeFileName("...")).toBe("file"));
+  it.each(arbitraryAttachmentCases)("accepts arbitrary attachment %s with MIME %s", (name, type) => {
+    const result = validateUploadInput({ name, size: 1, type });
+    expect(result).toEqual({ ok: true, mime: type.trim().toLowerCase() || "application/octet-stream" });
+  });
+  it("14 accepts a file exactly ten MiB", () => expect(validateUploadInput({ name: "exact.bin", size: MAX_FILE_BYTES, type: "" }).ok).toBe(true));
+  it("15 rejects empty files", () => expect(validateUploadInput({ name: "empty", size: 0, type: "" }).ok).toBe(false));
+  it("16 rejects files over ten MiB", () => expect(validateUploadInput({ name: "over.bin", size: MAX_FILE_BYTES + 1, type: "application/octet-stream" }).ok).toBe(false));
+  it("17 rejects oversized filename metadata", () => expect(prepareUploadSchema.safeParse({ slotId: 17, name: "a".repeat(181), size: 1, type: "" }).success).toBe(false));
+  it("18 rejects malformed MIME metadata without treating its value as authorization", () => expect(prepareUploadSchema.safeParse({ slotId: 17, name: "a.bin", size: 1, type: "x".repeat(121) }).success).toBe(false));
+  it("19 rejects an invalid slot in the prepare contract", () => expect(prepareUploadSchema.safeParse({ slotId: 100, name: "a.bin", size: 1, type: "" }).success).toBe(false));
+  it("20 defaults a missing MIME to octet-stream", () => expect(prepareUploadSchema.parse({ slotId: 17, name: "README", size: 1 }).type).toBe("application/octet-stream"));
   it("23 accepts generated exact paths", () => expect(isSafeObjectPath(path17)).toBe(true));
   it("24 accepts recognized legacy paths", () => expect(isSafeObjectPath("slot-17/old.txt")).toBe(true));
   it("25 rejects dot-dot paths", () => expect(isSafeObjectPath("slots/17/../a.txt")).toBe(false));
@@ -57,11 +78,27 @@ describe("PBV3.1 local contracts", () => {
     expect(cancelUploadSchema.safeParse({ capabilityId: uuid }).success).toBe(true);
     expect(slotCommitSchema.safeParse({ text: "x", fileAction: "replace", capabilityId: uuid }).success).toBe(true);
     expect(slotCommitSchema.safeParse({ text: "x", fileAction: "keep", capabilityId: uuid }).success).toBe(false);
-    expect(migration).toContain("update storage.buckets");
-    expect(migration).toContain("set public = false");
+    expect(migration).toContain("create table if not exists public.pb_v3_slots");
+    expect(migration).toContain("insert into storage.buckets");
+    expect(migration).toContain("on conflict (id) do update");
+    expect(migration).toContain("false,");
+    expect(migration).toContain("allowed_mime_types");
+    expect(migration).toMatch(/10485760,\s*null\s*\)/);
     expect(migration).toContain("metadata->>'size'");
     expect(migration).toContain("pb_v3_cleanup_not_before");
     expect(migration).toContain("revoke all on function public.pb_v3_commit_slot");
     expect(migration).not.toContain("create or replace function public.pb_v3_evict_oldest");
+    expect(client).toContain('fetch("/api/uploads/prepare"');
+    expect(client).toContain('method: "PUT"');
+    expect(client).toContain('const formData = new FormData()');
+    expect(client).toContain('formData.append("cacheControl", "3600")');
+    expect(client).toContain('file.slice(0, file.size, "application/octet-stream")');
+    expect(client).toContain('formData.append("", opaqueFile, "attachment")');
+    expect(client).not.toContain('"Content-Type": file.type');
+    expect(client).toContain('/download`');
+    expect(client).toContain('aria-label="전체 텍스트 복사"');
+    expect(client).toContain('current.removeFile || !current.hydrated');
+    expect(client).not.toContain('void load(slot ?? 0)');
+    expect(client).not.toContain('먼저 LOAD로 해당 슬롯을 불러온 뒤 저장하세요.');
   });
 });

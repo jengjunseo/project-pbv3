@@ -5,7 +5,6 @@ import { cancelUploadSchema } from "@/lib/validation";
 import type { CancelUploadResponse, PBErrorResponse } from "@/types/pb";
 
 export const runtime = "nodejs";
-export const preferredRegion = "icn1";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<Response> {
