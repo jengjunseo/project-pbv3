@@ -48,17 +48,26 @@ export function formatSlotId(id: number): string {
   return String(id).padStart(2, "0");
 }
 
+/**
+ * Generate an ASCII-only object basename for the Storage URL. Supabase keeps the
+ * original Unicode filename separately in the upload capability / slot row, so
+ * this value must never replace the name displayed to users or used at download.
+ * A UUID in the parent path guarantees uniqueness even for fallback names.
+ */
 export function sanitizeFileName(name: string): string {
   const basename = name.trim().split(/[\\/]/).pop() ?? "file";
-  const safe = basename
-    .normalize("NFKC")
-    .replace(/[\u0000-\u001f\u007f]/g, "")
-    .replace(/[^\p{L}\p{N}._()\- ]/gu, "-")
+  const normalized = basename.normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, "");
+  const extension = normalized.match(/\.([A-Za-z0-9]{1,16})$/)?.[1] ?? "";
+  const stem = extension ? normalized.slice(0, -extension.length - 1) : normalized;
+  const safeStem = stem
+    .replace(/[^A-Za-z0-9._()\- ]/g, "-")
     .replace(/\s+/g, "-")
+    .replace(/\.{2,}/g, "-")
     .replace(/-+/g, "-")
-    .replace(/^\.+/, "")
-    .slice(0, 120);
-  return safe || "file";
+    .replace(/^[._-]+|[._-]+$/g, "")
+    .slice(0, 100)
+    .replace(/[._-]+$/g, "");
+  return `${safeStem || "file"}${extension ? `.${extension}` : ""}`;
 }
 
 export function validateUploadInput(input: { name: string; size: number; type: string }): { ok: true; mime: string } | { ok: false; message: string } {
